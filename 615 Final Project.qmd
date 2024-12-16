@@ -1,0 +1,390 @@
+---
+title: "615 Final Project"
+author: "Yiming Chen"
+format: pdf
+editor: visual
+---
+
+## Running Library
+
+This section outlines the necessary libraries and packages required for the project. It ensures that all tools and dependencies are ready to support data processing, visualization, and user interaction throughout the analysis.
+
+```{r,warning=FALSE,message=FALSE}
+library(shiny)
+library(leaflet)
+library(ggplot2)
+library(tidyverse)
+library(readr)
+library(shinythemes)
+library(tidyr)
+library(dplyr)
+```
+
+## Load and Clean Data
+
+This section focuses on the essential steps to prepare the dataset for analysis. It includes importing raw data, handling missing or inconsistent values, and structuring the data to align with the requirements of subsequent analyses. The goal is to create a clean and reliable foundation for meaningful insights.
+
+```{r,warning=FALSE,message=FALSE}
+# Load and Clean Data
+data <- read_csv("cbd50a78-13f1-4476-ac61-5594a2439b18_Data.csv")
+
+colnames(data)[5:ncol(data)] <- gsub("\\s\\[YR\\d{4}\\]", "", colnames(data)[5:ncol(data)])
+
+# Define the indicators of interest
+selected_indicators <- c('GDP (current US$)', 'GDP growth (annual %)')
+#select_indicators <- c("Population change" = "Population, total",
+#                               "Expected Age" = "Life expectancy at birth, total (years)")
+select_indicators <- c("Population, total","Life expectancy at birth, total (years)")
+
+# Filter data
+filtered_data <- data |> 
+                 filter(`Series Name` %in% selected_indicators) |> 
+                 select(-c(`Country Name`, `Country Code`, `Series Code`))
+filter_data <- data |> 
+                 filter(`Series Name` %in% select_indicators) |> 
+                 select(-c(`Country Name`, `Country Code`, `Series Code`))
+
+# Convert data to long format
+long_data <- filtered_data |> 
+  pivot_longer(cols = `1973`:`2023`, names_to = "Year", values_to = "Value") |> 
+  mutate(
+    Year = as.numeric(Year), 
+    Value = as.numeric(gsub("[^0-9.-]", "", Value))
+  )
+
+longer_data <- filter_data |> 
+  pivot_longer(cols = `1973`:`2023`, names_to = "Year", values_to = "Value") |> 
+  mutate(
+    Year = as.numeric(Year), 
+    Value = as.numeric(gsub("[^0-9.-]", "", Value))
+  )
+#view(long_data)
+#view(longer_data)
+#write.csv(longer_data,"~/Downloads/filename.csv", row.names = FALSE)
+```
+
+## UI for Indonesia Analysis
+
+#### **Introduction**
+
+This section provides a comprehensive overview of Indonesia, covering its **Geography and Population**, **Culture**, and **Economic Overview**. It sets the stage for deeper insights into Indonesia's socio-economic dynamics and visualizations.
+
+#### **Interactive Map of Indonesia**
+
+Explore Indonesia interactively with a map that highlights key geographical and economic insights, enabling users to visualize regional trends effectively.
+
+#### **Economic Indicators**
+
+This subsection delves into Indonesia’s economic performance by presenting key metrics, such as GDP growth, trade balance, and industry contributions, helping to contextualize the nation’s development trajectory.
+
+#### **Population Statistics**
+
+A detailed analysis of Indonesia's demographic trends, including population distribution, growth rates, and age structure, offering a lens into the country’s societal fabric and future challenges.
+
+#### **UI for Comparison Analysis 2023**
+
+This component allows users to compare various socio-economic metrics of Indonesia with other countries or regions in 2023, fostering a better understanding of its global standing.
+
+#### **SWOT Analysis**
+
+The **SWOT Analysis** highlights Indonesia's Strengths, Weaknesses, Opportunities, and Threats in economic and demographic contexts. This strategic assessment helps identify areas of growth and potential risks.
+
+```{r}
+addResourcePath("images", "/Users/cc./Desktop/615 Final Project/www")
+
+# UI for Indonesia Analysis
+ui <- fluidPage(
+  theme = shinytheme("flatly"),
+  tags$style(HTML("\n    body { background-color: #f8f9fa; }\n    h3, h4 { color: #2c3e50; font-weight: bold; }\n    p { color: #34495e; }\n    .highlight-red { color: #e74c3c; font-weight: bold; }\n    .highlight-blue { color: #2980b9; font-weight: bold; }\n    .highlight-green { color: #27ae60; font-weight: bold; }\n    .highlight-orange { color: #f39c12; font-weight: bold; }\n    .custom-height { height: 600px; }\n  ")),
+
+  titlePanel(h1("Indonesia Analysis", align = "center", style = "color: #2980b9; font-weight: bold;")),
+
+  navbarPage("Navigator",
+    tabPanel("Introduction",
+      fluidRow(
+        column(6, wellPanel(
+          h3("Geography and Population"),
+          p(HTML("Indonesia, officially the <span class='highlight-red'>Republic of Indonesia</span>, is a country in <span class='highlight-blue'>Southeast Asia and Oceania</span>, between the <span class='highlight-blue'>Indian</span> and <span class='highlight-blue'>Pacific oceans</span>. Indonesia consists of over <span class='highlight-orange'>17,000 islands</span>, including <span class='highlight-blue'>Sumatra</span>, <span class='highlight-blue'>Java</span>, <span class='highlight-blue'>Sulawesi</span>, and various parts of <span class='highlight-blue'>Borneo</span> and <span class='highlight-blue'>New Guinea</span>.")),
+          p(HTML("Indonesia is the <span class='highlight-red'>world's largest archipelagic state</span> and the <span class='highlight-orange'>14th-largest country</span> by area, at <span class='highlight-green'>1,904,569 square kilometres</span> (735,358 square miles).")),
+          p(HTML("With a population over <span class='highlight-red'>280 million people</span>, Indonesia is the <span class='highlight-blue'>world's fourth-most-populous country</span> and the <span class='highlight-red'>most populous Muslim-majority country</span>.")),
+          p(HTML("<span class='highlight-blue'>Java</span>, the world's <span class='highlight-orange'>most populous island</span>, is home to more than <span class='highlight-green'>half of the country's entire population</span>."))
+        )),
+        column(6, align = "center",  # Add the image on the right-hand side
+          img(src = "images/WechatIMG20.jpg", height = "500px", width = "90%", alt = "Indonesia Overview")
+        )
+      ),
+      fluidRow(
+        column(6, wellPanel(
+          h3("Culture and Economic Overview"),
+          p(HTML("Indonesia is home to hundreds of distinct <span class='highlight-blue'>ethnic and linguistic groups</span>, with <span class='highlight-red'>Javanese</span> being the largest. Its motto <span class='highlight-orange'>\"Bhinneka Tunggal Ika\"</span> (<span class='highlight-blue'>Unity in Diversity</span>) reflects its rich cultural heritage.")),
+          p(HTML("As a <span class='highlight-green'>newly industrialized country</span>, Indonesia has the <span class='highlight-orange'>16th-largest economy</span> by nominal GDP and the <span class='highlight-red'>8th-largest by PPP</span>.")),
+          p(HTML("It is the <span class='highlight-blue'>world's third-largest democracy</span> and a <span class='highlight-green'>middle power</span> in global affairs.")),
+          p(HTML("Indonesia is a member of key global organizations like the <span class='highlight-blue'>United Nations</span>, <span class='highlight-blue'>G20</span>, <span class='highlight-blue'>ASEAN</span>, and the <span class='highlight-blue'>World Trade Organization</span>."))
+        ))
+      )
+    ),
+    
+    tabPanel("Map",
+      h3("Interactive Map of Indonesia"),
+      leafletOutput("indonesiaMap", height = "500px")
+    ),
+    
+    tabPanel("Economic Indicators",
+      sidebarLayout(
+        sidebarPanel(
+          h4("Selected Indicator:"),
+          selectInput("indicator", "Indicator", choices = selected_indicators),
+          h4("Select Year:"),
+          sliderInput("year", "Year Range:",
+                      min = min(long_data$Year),
+                      max = max(long_data$Year),
+                      value = c(min(1990), max(long_data$Year)),
+                      step = 1)
+        ),
+        mainPanel(
+          h3(textOutput("plot_title")),
+          plotOutput("gdp_plot")
+        )
+      )
+    ),
+    
+    tabPanel("Population Statistics",
+      sidebarLayout(
+        sidebarPanel(
+          h4("Select chart:"),
+          selectInput("chart_type", "Type:", choices = select_indicators),
+          h4("Select Year:"),
+          sliderInput("yearpop", "Year Range:",
+                      min = min(longer_data$Year),
+                      max = max(longer_data$Year),
+                      value = c(min(1990), max(longer_data$Year)),
+                      step = 1)
+          ),
+        mainPanel(
+          h3("Population Change Trend"),
+          plotOutput("pop_plot")
+          )
+        )
+      ),
+    
+    
+    # UI for Comparison Analysis
+tabPanel("Comparison Analysis for 2023",
+      sidebarLayout(
+        sidebarPanel(
+          selectInput("selected_country", "Select Country for Comparison:", 
+                      choices = c("Singapore", "Philippines"))
+        ),
+        mainPanel(
+          h3("GDP per Capita Comparison of Indonesia and Selected Country in 2023"),
+          textOutput("comparison_text")
+        )
+      )
+    ),
+
+
+    
+    tabPanel("SWOT Analysis",
+  sidebarLayout(
+    sidebarPanel(
+      # Dropdown for selecting SWOT category
+      selectInput("swot_category", "Select Category:",
+                  choices = c("Strengths", "Weaknesses", "Opportunities", "Threats"),
+                  selected = "Strengths")
+    ),
+    mainPanel(
+      h3("SWOT analysis of Indonesia's Economic and Social Landscape", style = "font-weight: bold;"),
+      uiOutput("swot_content")
+    )
+  )
+ )
+  )
+)
+
+```
+
+## Server logic
+
+Including: Introduction(Geography and Population, Culture and Economic Overview), Interactive Map of Indonesia, Economic Indicators, Population Statistics, UI for Comparison Analysis 2023, SWOT Analysis.
+
+This section explains the back-end implementation that powers the interactive features of the project. It covers server-side processing, data integration, and how requests from the user interface are handled efficiently.
+
+```{r,message=FALSE}
+# Server logic
+server <- function(input, output) {
+  
+  # Interactive Map
+  output$indonesiaMap <- renderLeaflet({
+    leaflet() %>%
+      addTiles() %>%
+      addMarkers(
+        lng = 106.8456, lat = -6.2088, popup = "Jakarta - Capital of Indonesia"
+      ) %>%
+      addMarkers(
+        lng = 120.98, lat = -8.4095, popup = "Bali - Popular Tourist Destination"
+      )
+  })
+  
+  # Generate interactive bar chart
+  output$gdp_plot <- renderPlot({
+    # Filter data based on input
+    filtered_plot <- long_data %>%
+      filter(`Series Name` == input$indicator,
+             Year >= input$year[1],
+             Year <= input$year[2],
+             !is.na(Value))  # Exclude NAs
+    
+    # Generate the vertical bar chart
+    ggplot(filtered_plot, aes(x = Year, y = Value)) +
+      geom_col(fill = "firebrick") +
+      scale_y_continuous(limits = c(0, max(filtered_plot$Value, na.rm = TRUE))) +
+      labs(
+        x = "Year",
+        y = input$indicator,
+        title = paste(input$indicator, "over Selected Years")
+      ) +
+      theme_minimal() +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  })
+  
+  # Render Population Statistics Line Chart
+  output$pop_plot <- renderPlot({
+    # Filter data based on input
+    filter_plot <- longer_data %>%
+      filter(`Series Name` == input$chart_type,
+             Year >= input$yearpop[1],
+             Year <= input$yearpop[2],
+             !is.na(Value))  # Exclude NAs
+  
+      # Generate Line Chart
+      ggplot(filter_plot, aes(x = Year, y = Value)) +
+        geom_line(color = "steelblue", size = 1) +
+        geom_point(color = "steelblue", size = 3) +
+        labs(
+          title = paste(input$chart_type, "Trend"),
+          x = "Year",
+          y = input$chart_type
+        ) +
+        theme_minimal() +
+        theme(axis.text.x = element_text(angle = 45, hjust = 1))
+    }
+  )
+
+  
+  
+  # Server Logic for Comparison Analysis
+output$comparison_text <- renderText({
+  
+  # Simulated GDP data (replace these with actual values if available)
+  indonesia_gdp <- 1390  # GDP for Indonesia in Billion USD
+  gdp_data <- list(
+    "Singapore" = 515,   # Singapore GDP in Billion USD
+    "Philippines" = 450  # Philippines GDP in Billion USD
+  )
+  
+  # Additional GDP growth and population data for analysis
+  indonesia_gdp_growth <- 5
+  singapore_gdp_growth <- 3
+  philippines_gdp_growth <- 6
+  
+  indonesia_population <- 278   # Population in millions
+  singapore_population <- 5.9   # Population in millions
+  philippines_population <- 118 # Population in millions
+  
+  selected_country <- input$selected_country
+  
+  # Validate input selection
+  if (is.null(selected_country)) return("Please select a country for comparison.")
+  
+  # Retrieve GDP for the selected country
+  selected_gdp <- gdp_data[[selected_country]]
+  
+  # Compare GDP and generate dynamic text with bullet points
+  comparison <- if (selected_country == "Singapore") {
+    paste(
+      "1. Indonesia has a much larger overall GDP of", indonesia_gdp, "billion USD compared to Singapore's",
+      selected_gdp, "billion USD.",
+      "\n 2. Singapore's GDP per capita is vastly higher, reflecting its highly urbanized and efficient economy.",
+      "\n 3. Despite Indonesia's higher GDP growth rate (~", indonesia_gdp_growth, "%), its lower per capita income highlights the need for development."
+    )
+  } else if (selected_country == "Philippines") {
+    paste(
+      "1. Both Indonesia and the Philippines are emerging economies, but Indonesia has a larger GDP of",
+      indonesia_gdp, "billion USD compared to the Philippines' GDP of", selected_gdp, "billion USD.",
+      "\n 2. The Philippines has a higher GDP growth rate (~", philippines_gdp_growth, "%), driven by remittances and consumption.",
+      "\n 3. Indonesia's larger population (", indonesia_population, " million) contrasts with the Philippines' smaller population (", philippines_population, " million), but the Philippines' population growth is faster."
+    )
+  } else {
+    paste("No comparison data available for the selected country.")
+  }
+  
+  return(comparison)
+})
+
+
+
+
+  # Server Logic: SWOT Analysis Content
+output$swot_content <- renderUI({
+  req(input$swot_category)  # Ensure input exists
+  
+  # Display content based on selected SWOT category
+  if (input$swot_category == "Strengths") {
+    tagList(
+      h4("KEY STRENGTHS", style = "font-weight: bold;"),
+      tags$ul(
+        tags$li("The GDP (current US$) has shown a consistent upward trend, particularly after the 2000s, indicating strong economic performance and stability."),
+        tags$li("Despite occasional fluctuations, GDP growth (annual %) remains positive for most years, highlighting resilience and sustained growth."),
+        tags$li("The total population has been steadily increasing, reaching approximately 270 million by 2023."),
+        tags$li("Life expectancy at birth has consistently risen, reflecting healthcare improvements and public policies.")
+      )
+    )
+  } else if (input$swot_category == "Weaknesses") {
+    tagList(
+      h4("KEY WEAKNESSES", style = "font-weight: bold;"),
+      tags$ul(
+        tags$li("The GDP growth (annual %) chart highlights sharp declines in the early 2000s and during the COVID-19 pandemic (2020)."),
+        tags$li("Economic shocks and global crises significantly impact Indonesia's growth trajectory."),
+        tags$li("The life expectancy chart shows a dip around 2005 and post-2020, suggesting challenges in healthcare and disease outbreaks.")
+      )
+    )
+  } else if (input$swot_category == "Opportunities") {
+    tagList(
+      h4("KEY OPPORTUNITIES", style = "font-weight: bold;"),
+      tags$ul(
+        tags$li("Indonesia's growing population provides opportunities for a larger workforce, productivity, and innovation."),
+        tags$li("Economic diversification through technology, renewable energy, and trade partnerships can drive sustainable growth."),
+        tags$li("Investing in healthcare systems and infrastructure can further enhance living standards and quality of life.")
+      )
+    )
+  } else if (input$swot_category == "Threats") {
+    tagList(
+      h4("KEY THREATS", style = "font-weight: bold;"),
+      tags$ul(
+        tags$li("Fluctuations in global markets, pandemics, and economic shocks pose significant risks to Indonesia's GDP growth."),
+        tags$li("Population pressure could strain infrastructure, employment, and resource management."),
+        tags$li("Vulnerabilities in the healthcare system limit the ability to effectively respond to public health crises.")
+      )
+    )
+  }
+})
+}
+```
+
+## Reference
+
+The final section lists all the resources and references utilized throughout the project, ensuring transparency and giving credit to sources of data, libraries, and inspiration.
+
+<https://databank.worldbank.org/reports.aspx?source=2&country=IDN#>
+
+<https://en.wikipedia.org/wiki/Provinces_of_Indonesia>
+
+<https://www.britannica.com/place/Indonesia>
+
+<https://pixabay.com/images/search/bali/>
+
+<https://pixabay.com/images/search/indonesia/>
+
+<https://en.wikipedia.org/wiki/Philippines>
+
+<https://en.wikipedia.org/wiki/Singapore>
